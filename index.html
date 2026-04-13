@@ -3588,22 +3588,39 @@ function sheetsUrl(){
   return url;
 }
 
-// JSONP helper for Apps Script (bypasses CORS)
+// Fetch helper for Apps Script — tries fetch first, falls back to JSONP
 function jsonpFetch(url, callback){
-  var cbName = 'gs_cb_'+Date.now();
-  var script = document.createElement('script');
-  window[cbName] = function(data){
-    delete window[cbName];
-    document.body.removeChild(script);
-    callback(null, data);
-  };
-  script.onerror = function(){
-    delete window[cbName];
-    document.body.removeChild(script);
-    callback(new Error('Script load error'));
-  };
-  script.src = url + (url.includes('?')?'&':'?') + 'callback='+cbName;
-  document.body.appendChild(script);
+  // Try regular fetch first (works when already authorized)
+  fetch(url, {method:'GET', credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(data){ callback(null, data); })
+    .catch(function(){
+      // Fallback to JSONP
+      var cbName = 'gs_cb_'+Date.now();
+      var script = document.createElement('script');
+      var done = false;
+      window[cbName] = function(data){
+        if(done) return; done=true;
+        delete window[cbName];
+        if(document.body.contains(script)) document.body.removeChild(script);
+        callback(null, data);
+      };
+      script.onerror = function(){
+        if(done) return; done=true;
+        delete window[cbName];
+        if(document.body.contains(script)) document.body.removeChild(script);
+        callback(new Error('Ошибка загрузки. Открой URL скрипта в браузере и авторизуйся'));
+      };
+      // 5 second timeout
+      setTimeout(function(){
+        if(done) return; done=true;
+        delete window[cbName];
+        if(document.body.contains(script)) document.body.removeChild(script);
+        callback(new Error('Таймаут. Открой URL скрипта в браузере и авторизуйся'));
+      }, 5000);
+      script.src = url + (url.includes('?')?'&':'?') + 'callback='+cbName;
+      document.body.appendChild(script);
+    });
 }
 
 function sheetsLoadMetrics(){
