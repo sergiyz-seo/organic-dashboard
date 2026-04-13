@@ -126,12 +126,6 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 .tb-flat{background:rgba(90,96,112,.15);color:var(--mu2)}
 
 /* ── FUNNEL CARDS ── */
-.funnel-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px}
-.fn-card{background:var(--s1);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;border-top:2px solid}
-.fn-label{font-size:10px;font-family:var(--mo);color:var(--mu);margin-bottom:4px}
-.fn-val{font-size:22px;font-weight:600;line-height:1}
-.fn-bar{height:2px;background:var(--s3);border-radius:2px;margin-top:8px}
-.fn-fill{height:2px;border-radius:2px}
 
 /* ── ATPU CARDS ── */
 .atpu-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
@@ -154,7 +148,6 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 .bottleneck-text{font-size:13px;font-weight:500}
 .bottleneck-sub{font-size:11px;color:var(--mu);margin-top:3px;font-family:var(--mo)}
 /* ── COHORT ── */
-.cohort-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .cohort-sel{background:var(--s2);border:1px solid var(--br);border-radius:8px;overflow:hidden;display:flex}
 .cohort-btn{padding:5px 12px;font-size:12px;font-family:var(--mo);color:var(--mu);background:transparent;border:none;cursor:pointer;transition:.12s}
 .cohort-btn.on{background:var(--pu);color:#fff}
@@ -175,7 +168,6 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 .anom-dev{font-family:var(--mo);font-size:11px;margin-left:auto}
 .anom-high{color:var(--rd)}.anom-low{color:var(--am)}
 
-.sec-lbl{font-family:var(--mo);font-size:10px;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px}
 /* scrollbar */
 
 /* ── AI PANEL ── */
@@ -240,7 +232,6 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 .seo-table td.url{font-family:var(--mo);color:var(--mu2);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seo-table td.num{text-align:right;font-family:var(--mo)}
 .seo-table th.num{text-align:right}
-.seo-spark{display:inline-block;vertical-align:middle;margin-left:6px}
 .pos-chip{display:inline-block;font-size:11px;font-family:var(--mo);font-weight:500;padding:1px 7px;border-radius:6px;min-width:34px;text-align:center}
 .pos-top3{background:rgba(16,185,129,.2);color:#10b981}
 .pos-top10{background:rgba(245,158,11,.15);color:#f59e0b}
@@ -679,13 +670,13 @@ function buildMapper(cols,auto){
 }
 
 function applyMap(){
-  function gv(k){var el=document.getElementById('mp_'+k);return el?el.value:'';}
-  if(!gv('date')||gv('date')==='— пропустить —'){alert('"Дата" обязательна');return;}
-  if(!gv('regs')||gv('regs')==='— пропустить —'){alert('"Registrations cnt" обязательна');return;}
+  function getFieldVal(k){var el=document.getElementById('mp_'+k);return el?el.value:'';}
+  if(!getFieldVal('date')||getFieldVal('date')==='— пропустить —'){alert('"Дата" обязательна');return;}
+  if(!getFieldVal('regs')||getFieldVal('regs')==='— пропустить —'){alert('"Registrations cnt" обязательна');return;}
 
   S.mapped = S.raw.map(function(row){
     function pick(k){
-      var col=gv(k);
+      var col=getFieldVal(k);
       if(!col||col==='— пропустить —') return null;
       var v=row[col];
       return(v!==undefined&&v!=='')?v:null;
@@ -712,14 +703,14 @@ function applyMap(){
     }
 
     var regs=num('regs'), ftd=num('ftd'), impr=num('impr'), clk=num('clicks');
-    var r2f = gv('reg2ftd')!=='— пропустить —' ? pct('reg2ftd') : (regs>0?+(ftd/regs*100).toFixed(3):0);
-    var r2t = gv('reg2try')!=='— пропустить —' ? pct('reg2try') : 0;
+    var r2f = getFieldVal('reg2ftd')!=='— пропустить —' ? pct('reg2ftd') : (regs>0?+(ftd/regs*100).toFixed(3):0);
+    var r2t = getFieldVal('reg2try')!=='— пропустить —' ? pct('reg2try') : 0;
 
     return{
       date:ds, regs:regs, ftd:ftd, impr:impr, clicks:clk,
       atpu:num('atpu'), atpuC:num('atpuC'), atpuS:num('atpuS'),
-      fraud: gv('fraud')!=='— пропустить —'   ? pct('fraud')   : 0,
-      ftd2std: gv('ftd2std')!=='— пропустить —' ? pct('ftd2std') : 0,
+      fraud: getFieldVal('fraud')!=='— пропустить —'   ? pct('fraud')   : 0,
+      ftd2std: getFieldVal('ftd2std')!=='— пропустить —' ? pct('ftd2std') : 0,
       reg2ftd: r2f, reg2try: r2t,
       ctr:  impr>0 ? +(clk/impr*100).toFixed(3) : 0,
       c2r:  clk>0  ? +(regs/clk*100).toFixed(3) : 0,
@@ -937,6 +928,15 @@ function trendBadge(rows,k,label,inv){
   var cls=Math.abs(chg)<1?'tb-flat':(good?'tb-up':'tb-dn');
   var arr=chg>0?'↑':chg<0?'↓':'→';
   return'<span class="trend-badge '+cls+'">'+arr+' '+label+' '+Math.abs(chg)+'%</span>';
+}
+
+
+// ── Global helper functions ─────────────────────────────
+function stdDev(arr){
+  if(arr.length<2) return 0;
+  var m=arr.reduce(function(a,b){return a+b;},0)/arr.length;
+  var v=arr.reduce(function(a,b){return a+Math.pow(b-m,2);},0)/arr.length;
+  return +Math.sqrt(v).toFixed(2);
 }
 
 // ═════════════════════════════════════════════════════
@@ -1162,13 +1162,6 @@ function pgOrganic(rows){
     var last=allDaily[allDaily.length-1].date;
     var fromD=new Date(last); fromD.setDate(fromD.getDate()-S.period+1);
     allDaily=allDaily.filter(function(d){return d.date>=fromD.toISOString().slice(0,10);});
-  }
-
-  function stdDev(arr){
-    if(arr.length<2) return 0;
-    var m=arr.reduce(function(a,b){return a+b;},0)/arr.length;
-    var v=arr.reduce(function(a,b){return a+Math.pow(b-m,2);},0)/arr.length;
-    return +Math.sqrt(v).toFixed(1);
   }
 
   var clkArr=allDaily.map(function(d){return+d.clicks||0;});
@@ -1434,11 +1427,7 @@ function pgConv(rows){
   }
   // forecastDaily — ALWAYS last 14 days from full dataset, period-independent
   var forecastDaily=S.mapped.slice(-14);
-  function stdDev(arr){
-    if(arr.length<2)return 0;
-    var m=arr.reduce(function(a,b){return a+b;},0)/arr.length;
-    return +Math.sqrt(arr.reduce(function(a,b){return a+Math.pow(b-m,2);},0)/arr.length).toFixed(2);
-  }
+  // stdDev is global
   var sigmaC2r=stdDev(allDaily.map(function(d){return+(+d.c2r).toFixed(2);}));
   var sigmaR2ftd=stdDev(allDaily.map(function(d){return+(+d.r2ftd).toFixed(2);}));
 
@@ -2023,12 +2012,6 @@ function bottleneckHtml(rows,prev,pl){
     '<div class="bottleneck-sub">Изменение: '+wd+'% vs '+pl+'</div></div>';
 }
 
-function sumCard(lbl,val,d,inv,pl,warn){
-  var cls=warn?'sum-card highlight':(d!==null&&(inv?d<0:d>0)?'sum-card ok':'sum-card');
-  return'<div class="'+cls+'"><div class="sum-card-label">'+lbl+'</div>'+
-    '<div class="sum-card-val">'+val+'</div>'+
-    '<div class="sum-card-sub">'+dHtml(d,inv,pl)+'</div></div>';
-}
 
 
 // ═════════════════════════════════════════════════════
@@ -3527,18 +3510,7 @@ function scheduleAutoSave(){
 }
 
 function refreshGoalsDisplay(){
-  var qKey=goalsQKey(), qm=goalsQMonths();
-  // Refresh gauge cards
-  var qFact=factFor(qKey);
-  METRICS.forEach(function(m){
-    var plan2=gv(qKey,m.k);
-    var fact2=m.manual?gv(qKey,m.k+'_fact'):qFact[m.k];
-    var p2=goalPct(fact2,plan2), clr2=pctClr(p2);
-    var rr2=runrate(fact2,qKey);
-    // update gauge card — find by position (they're in order)
-  });
-  // Easiest: just re-render everything BUT preserve input focus
-  // Since onblur fires after focus leaves, full re-render is safe
+  // Re-render full goals page — safe since onblur fires after focus leaves input
   pgGoals();
 }
 
