@@ -497,7 +497,7 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
         🎯 Загрузить цели
       </button>
       <button onclick="sheetsSaveGoals()" style="padding:8px 14px;background:transparent;color:#8b5cf6;border:1px solid #8b5cf6;border-radius:8px;font-size:12px;font-family:var(--mo);cursor:pointer;text-align:left">
-        💾 Сохранить цели в Sheets
+        💾 Сохранить цели + отчёт в Sheets
       </button>
     </div>
 
@@ -3613,18 +3613,121 @@ async function sheetsSaveGoals(){
   var url = sheetsUrl(); if(!url) return;
   sheetsStatus('⏳ Сохраняем цели...');
   try{
+    // Save raw goals (for sync between devices)
     var goals = loadGoals();
-    // For POST we use fetch with no-cors (can't read response but data saves)
     await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({action:'saveGoals', goals:goals})
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'saveGoals',goals:goals})
     });
-    sheetsStatus('✓ Цели отправлены в Google Sheets');
+
+    // Also save formatted report
+    var reportRows = buildGoalsReport();
+    if(reportRows.length){
+      await fetch(url, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'saveReport',rows:reportRows})
+      });
+    }
+    sheetsStatus('✓ Цели и отчёт сохранены в Google Sheets');
   } catch(e){
     sheetsStatus('⚠ Ошибка: '+e.message, true);
   }
+}
+
+function buildGoalsReport(){
+  // Build plan/fact/pct/runrate rows for all quarters that have data
+  var goals = loadGoals();
+  var rows  = [];
+  var METRICS2 = [
+    {k:'clicks', label:'Клики',           manual:false},
+    {k:'regs',   label:'Регистрации',      manual:false},
+    {k:'ftd',    label:'FTD Init',         manual:false},
+    {k:'nbrand', label:'Небренд трафик',   manual:true},
+  ];
+
+  // Find all period keys in goals
+  var periods = Object.keys(goals).sort();
+
+  periods.forEach(function(period){
+    // Determine if quarter or month
+    var isQuarter = period.indexOf('-Q') !== -1;
+    var type      = isQuarter ? 'Квартал' : 'Месяц';
+
+    // Get fact data
+    var fact = {clicks:0,impr:0,regs:0,ftd:0};
+    if(S.mapped.length){
+      var filtered = S.mapped.filter(function(r){
+        if(isQuarter){
+          var qNum = parseInt(period.split('-Q')[1]);
+          var qYear= parseInt(period.split('-Q')[0]);
+          var mo   = parseInt(r.date.slice(5,7));
+          var yr   = parseInt(r.date.slice(0,4));
+          var qm   = [(qNum-1)*3+1,(qNum-1)*3+2,(qNum-1)*3+3];
+          return yr===qYear && qm.indexOf(mo)!==-1;
+        } else {
+          return r.date.slice(0,7)===period;
+        }
+      });
+      filtered.forEach(function(r){
+        fact.clicks+=(+r.clicks||0);
+        fact.regs  +=(+r.regs  ||0);
+        fact.ftd   +=(+r.ftd   ||0);
+      });
+    }
+
+    METRICS2.forEach(function(m){
+      var plan2 = (goals[period]&&goals[period][m.k]) ? +goals[period][m.k] : 0;
+      var fact2 = m.manual
+        ? ((goals[period]&&goals[period][m.k+'_fact']) ? +goals[period][m.k+'_fact'] : 0)
+        : fact[m.k];
+
+      // runrate
+      var rr = 0;
+      var today = new Date();
+      try{
+        var totalDays=0, elapsedDays=0;
+        if(isQuarter){
+          var qNum2  = parseInt(period.split('-Q')[1]);
+          var qYear2 = parseInt(period.split('-Q')[0]);
+          var qm2    = [(qNum2-1)*3+1,(qNum2-1)*3+2,(qNum2-1)*3+3];
+          totalDays  = qm2.reduce(function(a,mn){return a+new Date(qYear2,mn,0).getDate();},0);
+          var qStart = new Date(qYear2,(qNum2-1)*3,1);
+          var qEnd   = new Date(qYear2,qNum2*3,0);
+          if(today>=qStart){
+            var now = today>qEnd?qEnd:today;
+            elapsedDays = Math.max(1,Math.round((now-qStart)/864e5)+1);
+            rr = Math.round(fact2/elapsedDays*totalDays);
+          }
+        } else {
+          var p3  = period.split('-'), y3=+p3[0], mo3=+p3[1];
+          totalDays   = new Date(y3,mo3,0).getDate();
+          var mStart  = new Date(y3,mo3-1,1);
+          var mEnd    = new Date(y3,mo3,0);
+          if(today>=mStart){
+            var now2 = today>mEnd?mEnd:today;
+            elapsedDays = Math.max(1,Math.round((now2-mStart)/864e5)+1);
+            rr = Math.round(fact2/elapsedDays*totalDays);
+          }
+        }
+      }catch(e){}
+
+      var pct2 = plan2>0 ? +(fact2/plan2*100).toFixed(1) : null;
+
+      rows.push({
+        period:  period,
+        type:    type,
+        metric:  m.label,
+        plan:    plan2||0,
+        fact:    fact2||0,
+        pct:     pct2!==null ? pct2+'%' : '—',
+        runrate: rr||0
+      });
+    });
+  });
+
+  return rows;
 }
 
 
