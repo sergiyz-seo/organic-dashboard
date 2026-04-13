@@ -340,9 +340,10 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 
   <div class="nav-sep"></div>
 
-  <div class="nav-link" onclick="openSheetsPanel()">
+  <div class="nav-link" onclick="openSheetsPanel()" id="navSheets">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 017 7h1m6 0h1a5 5 0 010 10h-1m-5-5h6" stroke-width="1.7" stroke-linecap="round"/></svg>
     Google Sheets
+    <span id="sheetsNavDot" style="display:none;width:6px;height:6px;background:#10b981;border-radius:50%;margin-left:auto;flex-shrink:0"></span>
   </div>
 
   <div class="nav-link" onclick="document.getElementById('fileIn').click()">
@@ -469,7 +470,7 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
   <div style="padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
 
     <div style="font-size:11px;color:var(--mu);font-family:var(--mo);line-height:1.7">
-      Вставь URL твоего Apps Script веб-приложения.<br>
+      Вставь URL один раз — данные будут загружаться автоматически при каждом открытии страницы на любом устройстве.<br><br>
       Таблица → Расширения → Apps Script → Развернуть → Веб-приложение
     </div>
 
@@ -482,6 +483,10 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
     </div>
 
     <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="autoLoadFromSheets()" style="padding:8px 14px;background:linear-gradient(135deg,#10b981,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:12px;font-family:var(--mo);cursor:pointer;text-align:left;font-weight:500">
+        🔄 Обновить все данные
+      </button>
+      <div style="height:1px;background:var(--br)"></div>
       <button onclick="sheetsLoadMetrics()" style="padding:8px 14px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:12px;font-family:var(--mo);cursor:pointer;text-align:left">
         📊 Загрузить метрики
       </button>
@@ -3520,9 +3525,14 @@ function openSheetsPanel(){
   var panel = document.getElementById('sheetsPanel');
   var overlay = document.getElementById('sheetsOverlay');
   var input = document.getElementById('sheetsUrl');
-  if(input) input.value = getSheetsUrl();
+  var url = getSheetsUrl();
+  if(input) input.value = url;
   panel.classList.add('open');
   overlay.classList.add('open');
+  // Show saved status
+  if(url){
+    sheetsStatus('✓ URL сохранён — данные грузятся автоматически при открытии');
+  }
 }
 function closeSheetsPanel(){
   document.getElementById('sheetsPanel').classList.remove('open');
@@ -3616,6 +3626,63 @@ async function sheetsSaveGoals(){
     sheetsStatus('⚠ Ошибка: '+e.message, true);
   }
 }
+
+
+// ═════════════════════════════════════════════════════
+//  AUTO-LOAD FROM GOOGLE SHEETS ON PAGE OPEN
+// ═════════════════════════════════════════════════════
+function autoLoadFromSheets(){
+  var url = getSheetsUrl();
+  // Show green dot in nav if URL saved
+  var dot = document.getElementById('sheetsNavDot');
+  if(dot) dot.style.display = url ? 'block' : 'none';
+  if(!url) return; // no URL saved — skip
+
+  // Show loading indicator in nav
+  var navFile = document.getElementById('navFile');
+  var navRows = document.getElementById('navRows');
+  if(navFile) navFile.textContent = '⏳ Загрузка из Google Sheets...';
+
+  var loaded = {metrics: false, seo: false};
+
+  function checkDone(){
+    if(loaded.metrics){
+      if(navRows) navRows.textContent = S.mapped.length + ' строк · из Google Sheets';
+    }
+  }
+
+  // Load metrics
+  jsonpFetch(url + '?action=metrics', function(err, data){
+    if(err || !data || data.error || !data.length){
+      if(navFile) navFile.textContent = '⚠ Ошибка загрузки';
+      return;
+    }
+    onRaw(data, 'Google Sheets');
+    loaded.metrics = true;
+    checkDone();
+  });
+
+  // Load SEO silently
+  jsonpFetch(url + '?action=seo', function(err, data){
+    if(err || !data || data.error || !data.length) return;
+    seoOnRaw(data, 'Google Sheets (SEO)');
+    loaded.seo = true;
+  });
+
+  // Load goals silently
+  jsonpFetch(url + '?action=goals', function(err, data){
+    if(err || !data || data.error) return;
+    var local = loadGoals();
+    saveGoals(Object.assign(local, data));
+    if(S.page === 'goals') pgGoals();
+  });
+}
+
+// Run on page load
+window.addEventListener('load', function(){
+  // Small delay to let page render first
+  setTimeout(autoLoadFromSheets, 300);
+});
 
 </script>
 </body>
