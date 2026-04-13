@@ -782,8 +782,11 @@ function sliceMain(){
     days=days.filter(function(d){return d.date>=S.dateRange.from&&d.date<=S.dateRange.to;});
   } else if(S.period<999 && days.length){
     var last=days[days.length-1].date;
-    var from=new Date(last); from.setDate(from.getDate()-S.period+1);
-    var fs=from.toISOString().slice(0,10);
+    var lp=last.split('-');
+    var from=new Date(+lp[0],+lp[1]-1,+lp[2]-S.period+1);
+    var fs=(from.getFullYear())+'-'+
+      (from.getMonth()<9?'0':'')+(from.getMonth()+1)+'-'+
+      (from.getDate()<10?'0':'')+from.getDate();
     days=days.filter(function(d){return d.date>=fs;});
   }
   if(S.gran==='week') return toWeeks(days);
@@ -813,8 +816,9 @@ function autoSliceCmp(){
   } else {
     if(S.period>=999) return [];
     var last=days[days.length-1].date;
-    ed=new Date(last); ed.setDate(ed.getDate()-S.period);
-    sd=new Date(last); sd.setDate(sd.getDate()-S.period*2+1);
+    var lp2=last.split('-');
+    ed=new Date(+lp2[0],+lp2[1]-1,+lp2[2]-S.period);
+    sd=new Date(+lp2[0],+lp2[1]-1,+lp2[2]-S.period*2+1);
   }
   var prev=days.filter(function(d){return d.date>=sd.toISOString().slice(0,10)&&d.date<=ed.toISOString().slice(0,10);});
   if(!prev.length) return [];
@@ -916,12 +920,16 @@ function dHtml(pct,inv,pl){
   return'<span class="'+cls+'">'+arr+' '+Math.abs(pct)+'%'+note+'</span>';
 }
 function trendBadge(rows,k,label,inv){
-  if(rows.length<3) return'';
-  var sl=rows.slice(-5), f=+sl[0][k]||0, l=+sl[sl.length-1][k]||0;
-  if(!f) return'';
-  var chg=+(((l-f)/Math.abs(f))*100).toFixed(1);
+  if(rows.length<2) return'';
+  // Compare first half avg vs second half avg for more stable trend
+  var mid=Math.floor(rows.length/2);
+  var first=rows.slice(0,mid), second=rows.slice(mid);
+  var avgFirst=first.reduce(function(a,r){return a+(+r[k]||0);},0)/first.length;
+  var avgSecond=second.reduce(function(a,r){return a+(+r[k]||0);},0)/second.length;
+  if(!avgFirst) return'';
+  var chg=+(((avgSecond-avgFirst)/Math.abs(avgFirst))*100).toFixed(1);
   var good=inv?chg<0:chg>0;
-  var cls=Math.abs(chg)<0.5?'tb-flat':(good?'tb-up':'tb-dn');
+  var cls=Math.abs(chg)<1?'tb-flat':(good?'tb-up':'tb-dn');
   var arr=chg>0?'↑':chg<0?'↓':'→';
   return'<span class="trend-badge '+cls+'">'+arr+' '+label+' '+Math.abs(chg)+'%</span>';
 }
