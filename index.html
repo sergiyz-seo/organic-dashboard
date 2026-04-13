@@ -3741,45 +3741,54 @@ function autoLoadFromSheets(){
   // Show green dot in nav if URL saved
   var dot = document.getElementById('sheetsNavDot');
   if(dot) dot.style.display = url ? 'block' : 'none';
-  if(!url) return; // no URL saved — skip
+  if(!url){
+    sheetsStatus('⚠ Сначала укажи URL Apps Script', true);
+    return;
+  }
 
-  // Show loading indicator in nav
+  sheetsStatus('⏳ Загружаем все данные...');
+
+  // Show loading in nav
   var navFile = document.getElementById('navFile');
   var navRows = document.getElementById('navRows');
   if(navFile) navFile.textContent = '⏳ Загрузка из Google Sheets...';
 
-  var loaded = {metrics: false, seo: false};
-
+  var doneCount = 0;
   function checkDone(){
-    if(loaded.metrics){
+    doneCount++;
+    if(doneCount >= 3){
       if(navRows) navRows.textContent = S.mapped.length + ' строк · из Google Sheets';
+      sheetsStatus('✓ Все данные загружены (' + S.mapped.length + ' строк метрик)');
     }
   }
 
   // Load metrics
   jsonpFetch(url + '?action=metrics', function(err, data){
     if(err || !data || data.error || !data.length){
+      sheetsStatus('⚠ Ошибка загрузки метрик: ' + (err?err.message:(data&&data.error)||'пусто'), true);
       if(navFile) navFile.textContent = '⚠ Ошибка загрузки';
-      return;
+      checkDone(); return;
     }
     onRaw(data, 'Google Sheets');
-    loaded.metrics = true;
     checkDone();
   });
 
-  // Load SEO silently
+  // Load SEO
   jsonpFetch(url + '?action=seo', function(err, data){
-    if(err || !data || data.error || !data.length) return;
-    seoOnRaw(data, 'Google Sheets (SEO)');
-    loaded.seo = true;
+    if(!err && data && !data.error && data.length){
+      seoOnRaw(data, 'Google Sheets (SEO)');
+    }
+    checkDone();
   });
 
-  // Load goals silently
+  // Load goals
   jsonpFetch(url + '?action=goals', function(err, data){
-    if(err || !data || data.error) return;
-    var local = loadGoals();
-    saveGoals(Object.assign(local, data));
-    if(S.page === 'goals') pgGoals();
+    if(!err && data && !data.error){
+      var local = loadGoals();
+      saveGoals(Object.assign(local, data));
+      if(S.page === 'goals') pgGoals();
+    }
+    checkDone();
   });
 }
 
