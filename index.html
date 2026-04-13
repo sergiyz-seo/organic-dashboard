@@ -3482,13 +3482,48 @@ function pgGoals(){
     '</div>';
 }
 
+var _autoSaveTimer = null;
+
 function setGoal(period,metric,val){
   var goals=loadGoals();
   if(!goals[period]) goals[period]={};
   goals[period][metric]=+val||0;
   saveGoals(goals);
-  // only refresh gauges + table, NOT the input fields
   refreshGoalsDisplay();
+  // Auto-save to Sheets after 2s of inactivity
+  scheduleAutoSave();
+}
+
+function scheduleAutoSave(){
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  // Show pending indicator
+  var status = document.getElementById('sheetsStatus');
+  if(status){ status.style.display='block'; status.style.color='var(--mu)'; status.textContent='⏳ Сохранение в Sheets через 2 сек...'; }
+  _autoSaveTimer = setTimeout(function(){
+    var url = getSheetsUrl();
+    if(!url){ 
+      if(status){ status.style.display='none'; }
+      return; 
+    }
+    // Save goals
+    var goals = loadGoals();
+    fetch(url, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'saveGoals', goals:goals})
+    }).catch(function(){});
+    // Save report
+    var reportRows = buildGoalsReport();
+    if(reportRows.length){
+      fetch(url, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'saveReport', rows:reportRows})
+      }).catch(function(){});
+    }
+    if(status){ status.style.color='#10b981'; status.textContent='✓ Автосохранено в Google Sheets'; }
+    setTimeout(function(){ if(status) status.style.display='none'; }, 3000);
+  }, 2000);
 }
 
 function refreshGoalsDisplay(){
@@ -3601,9 +3636,7 @@ function sheetsLoadGoals(){
   jsonpFetch(url+'?action=goals', function(err, data){
     if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
     if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    var local = loadGoals();
-    var merged = Object.assign(local, data);
-    saveGoals(merged);
+    var local    saveGoals(data);d);
     sheetsStatus('✓ Цели загружены');
     if(S.page==='goals') pgGoals();
   });
@@ -3784,8 +3817,7 @@ function autoLoadFromSheets(){
   // Load goals
   jsonpFetch(url + '?action=goals', function(err, data){
     if(!err && data && !data.error){
-      var local = loadGoals();
-      saveGoals(Object.assign(local, data));
+      saveGoals(data);
       if(S.page === 'goals') pgGoals();
     }
     checkDone();
