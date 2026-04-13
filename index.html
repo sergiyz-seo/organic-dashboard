@@ -3715,13 +3715,15 @@ function buildGoalsReport(){
 
       var pct2 = plan2>0 ? +(fact2/plan2*100).toFixed(1) : null;
 
+      // Cap % at 100 for display, show actual in parentheses if over
+      var pctDisplay = pct2===null ? '—' : (pct2>100 ? '✓ '+pct2+'%' : pct2+'%');
       rows.push({
         period:  period,
         type:    type,
         metric:  m.label,
         plan:    plan2||0,
         fact:    fact2||0,
-        pct:     pct2!==null ? pct2+'%' : '—',
+        pct:     pctDisplay,
         runrate: rr||0
       });
     });
