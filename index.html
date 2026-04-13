@@ -3636,7 +3636,7 @@ function sheetsLoadGoals(){
   jsonpFetch(url+'?action=goals', function(err, data){
     if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
     if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    var local    saveGoals(data);d);
+    saveGoals(data);
     sheetsStatus('✓ Цели загружены');
     if(S.page==='goals') pgGoals();
   });
