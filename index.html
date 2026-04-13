@@ -3537,53 +3537,60 @@ function sheetsUrl(){
   return url;
 }
 
-async function sheetsLoadMetrics(){
-  var url = sheetsUrl(); if(!url) return;
-  sheetsStatus('⏳ Загружаем метрики...');
-  try{
-    var resp = await fetch(url+'?action=metrics');
-    var data = await resp.json();
-    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    if(!data.length){ sheetsStatus('⚠ Лист metrics пустой', true); return; }
-    // Use same parser as file upload — feed into onRaw
-    onRaw(data, 'Google Sheets (metrics)');
-    sheetsStatus('✓ Загружено '+data.length+' строк метрик');
-  } catch(e){
-    sheetsStatus('⚠ Ошибка: '+e.message, true);
-  }
+// JSONP helper for Apps Script (bypasses CORS)
+function jsonpFetch(url, callback){
+  var cbName = 'gs_cb_'+Date.now();
+  var script = document.createElement('script');
+  window[cbName] = function(data){
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(null, data);
+  };
+  script.onerror = function(){
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(new Error('Script load error'));
+  };
+  script.src = url + (url.includes('?')?'&':'?') + 'callback='+cbName;
+  document.body.appendChild(script);
 }
 
-async function sheetsLoadSeo(){
+function sheetsLoadMetrics(){
+  var url = sheetsUrl(); if(!url) return;
+  sheetsStatus('⏳ Загружаем метрики...');
+  jsonpFetch(url+'?action=metrics', function(err, data){
+    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
+    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
+    if(!data.length){ sheetsStatus('⚠ Лист metrics пустой', true); return; }
+    onRaw(data, 'Google Sheets (metrics)');
+    sheetsStatus('✓ Загружено '+data.length+' строк метрик');
+  });
+}
+
+function sheetsLoadSeo(){
   var url = sheetsUrl(); if(!url) return;
   sheetsStatus('⏳ Загружаем SEO...');
-  try{
-    var resp = await fetch(url+'?action=seo');
-    var data = await resp.json();
+  jsonpFetch(url+'?action=seo', function(err, data){
+    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
     if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
     if(!data.length){ sheetsStatus('⚠ Лист seo пустой', true); return; }
     seoOnRaw(data, 'Google Sheets (seo)');
     sheetsStatus('✓ Загружено '+data.length+' строк SEO');
-  } catch(e){
-    sheetsStatus('⚠ Ошибка: '+e.message, true);
-  }
+  });
 }
 
-async function sheetsLoadGoals(){
+function sheetsLoadGoals(){
   var url = sheetsUrl(); if(!url) return;
   sheetsStatus('⏳ Загружаем цели...');
-  try{
-    var resp = await fetch(url+'?action=goals');
-    var data = await resp.json();
+  jsonpFetch(url+'?action=goals', function(err, data){
+    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
     if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    // Merge with local goals (Sheets wins)
     var local = loadGoals();
     var merged = Object.assign(local, data);
     saveGoals(merged);
     sheetsStatus('✓ Цели загружены');
     if(S.page==='goals') pgGoals();
-  } catch(e){
-    sheetsStatus('⚠ Ошибка: '+e.message, true);
-  }
+  });
 }
 
 async function sheetsSaveGoals(){
@@ -3591,14 +3598,14 @@ async function sheetsSaveGoals(){
   sheetsStatus('⏳ Сохраняем цели...');
   try{
     var goals = loadGoals();
-    var resp = await fetch(url, {
+    // For POST we use fetch with no-cors (can't read response but data saves)
+    await fetch(url, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
       body: JSON.stringify({action:'saveGoals', goals:goals})
     });
-    var data = await resp.json();
-    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    sheetsStatus('✓ Цели сохранены в Google Sheets');
+    sheetsStatus('✓ Цели отправлены в Google Sheets');
   } catch(e){
     sheetsStatus('⚠ Ошибка: '+e.message, true);
   }
