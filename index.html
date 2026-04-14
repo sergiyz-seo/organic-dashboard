@@ -3719,8 +3719,8 @@ function loadBrandData(idx, callback){
 // Process raw sheet data through column mapping
 function processRawToMapped(raw){
   if(!raw || !raw.length) return [];
-  // Auto-detect columns from first row keys
   var keys = Object.keys(raw[0]);
+
   function findCol(patterns){
     for(var i=0;i<patterns.length;i++){
       var p=patterns[i].toLowerCase();
@@ -3730,6 +3730,29 @@ function processRawToMapped(raw){
     }
     return null;
   }
+
+  // Parse number — handles "6.00%", 0.06 (fraction), or plain 6
+  function n(val){
+    if(val===null||val===undefined||val==='') return 0;
+    var s = String(val).trim();
+    var isPct = s.indexOf('%') !== -1;
+    var num = parseFloat(s.replace('%','').replace(',','.'));
+    if(isNaN(num)) return 0;
+    // If stored as fraction (0.06) convert to percent (6)
+    // If stored as "6.00%" keep as 6
+    // If stored as 0.44 and no % sign — could be fraction, check magnitude
+    if(isPct) return +num.toFixed(4);
+    // No % sign: if value < 1.5 it's likely a fraction (0.44 = 44%)
+    if(num > 0 && num < 1.5) return +(num * 100).toFixed(4);
+    return +num.toFixed(4);
+  }
+
+  // For absolute counts (clicks, regs etc) — just parse number
+  function abs(val){
+    if(val===null||val===undefined||val==='') return 0;
+    return +parseFloat(String(val).replace('%','').replace(',','.')) || 0;
+  }
+
   var colDate  = findCol(['date']);
   var colImpr  = findCol(['impression','impr','show','показ']);
   var colClk   = findCol(['click','клик']);
@@ -3745,13 +3768,14 @@ function processRawToMapped(raw){
 
   return raw.map(function(r){
     var dateVal = colDate ? String(r[colDate]||'') : '';
-    // Normalize date
     if(dateVal.indexOf('T') !== -1) dateVal = dateVal.slice(0,10);
     if(!dateVal || dateVal.length < 8) return null;
-    var clk  = +(r[colClk]||0);
-    var impr = +(r[colImpr]||0);
-    var regs = +(r[colRegs]||0);
-    var ftd  = +(r[colFtd]||0);
+
+    var clk  = abs(r[colClk]);
+    var impr = abs(r[colImpr]);
+    var regs = abs(r[colRegs]);
+    var ftd  = abs(r[colFtd]);
+
     return {
       date:    dateVal,
       lbl:     dateVal,
@@ -3759,16 +3783,16 @@ function processRawToMapped(raw){
       clicks:  clk,
       regs:    regs,
       ftd:     ftd,
-      atpu:    +(r[colAtpu]||0),
-      atpuC:   +(r[colAtpuC]||0),
-      atpuS:   +(r[colAtpuS]||0),
-      fraud:   +(r[colFraud]||0),
-      ftd2std: +(r[colF2s]||0),
-      r2ftd:   colR2f ? +(r[colR2f]||0) : (regs>0?+(ftd/regs*100).toFixed(3):0),
-      reg2ftd: colR2f ? +(r[colR2f]||0) : (regs>0?+(ftd/regs*100).toFixed(3):0),
-      reg2try: +(r[colR2t]||0),
-      ctr:     impr>0 ? +(clk/impr*100).toFixed(3) : 0,
-      c2r:     clk>0  ? +(regs/clk*100).toFixed(3)  : 0,
+      atpu:    abs(r[colAtpu]),
+      atpuC:   abs(r[colAtpuC]),
+      atpuS:   abs(r[colAtpuS]),
+      fraud:   colFraud ? n(r[colFraud]) : 0,
+      ftd2std: colF2s   ? n(r[colF2s])   : (ftd>0?+(ftd/regs*100).toFixed(3):0),
+      r2ftd:   colR2f   ? n(r[colR2f])   : (regs>0?+(ftd/regs*100).toFixed(3):0),
+      reg2ftd: colR2f   ? n(r[colR2f])   : (regs>0?+(ftd/regs*100).toFixed(3):0),
+      reg2try: colR2t   ? n(r[colR2t])   : 0,
+      ctr:     impr>0   ? +(clk/impr*100).toFixed(3) : 0,
+      c2r:     clk>0    ? +(regs/clk*100).toFixed(3) : 0,
     };
   }).filter(Boolean).sort(function(a,b){return a.date>b.date?1:-1;});
 }
