@@ -696,7 +696,7 @@ function autoDetect(cols){
 
 function hideUploadZone(){
   var uz = document.getElementById('uploadZone');
-  if(uz) uz.classList.add('hidden');
+  if(uz){ uz.classList.add('hidden'); uz.style.display='none'; }
   var mb = document.getElementById('mapperBox');
   if(mb) mb.style.display='none';
 }
