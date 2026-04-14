@@ -270,6 +270,28 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 .quarter-sel select{background:var(--s3);border:1px solid var(--br);border-radius:6px;color:var(--tx);font-size:12px;font-family:var(--mo);padding:5px 10px}
 .quarter-sel select:focus{outline:none;border-color:var(--ac)}
 
+
+/* ── INSIGHTS BLOCK ── */
+.ins-block{background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.ins-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;font-size:12px;font-weight:500;color:var(--mu2)}
+.ins-toggle:hover{background:rgba(59,130,246,0.06)}
+.ins-toggle svg{flex-shrink:0;transition:transform .2s}
+.ins-toggle.open svg{transform:rotate(90deg)}
+.ins-body{display:none;padding:0 14px 12px}
+.ins-body.open{display:block}
+.ins-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;line-height:1.5;color:var(--mu2)}
+.ins-item:last-child{border-bottom:none}
+.ins-icon{flex-shrink:0;width:16px;text-align:center;margin-top:1px}
+.ins-good{color:#10b981}.ins-warn{color:#f59e0b}.ins-bad{color:#ef4444}.ins-info{color:#3b82f6}
+
+
+/* ── BRAND SWITCHER ── */
+.brand-switcher{display:flex;gap:4px;align-items:center;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:3px}
+.brand-btn{padding:5px 14px;border-radius:6px;border:none;background:transparent;color:var(--mu);font-size:12px;font-family:var(--mo);cursor:pointer;transition:.15s;white-space:nowrap}
+.brand-btn.active{background:var(--ac);color:#fff;font-weight:500}
+.brand-btn:hover:not(.active){background:var(--s3);color:var(--tx)}
+.brand-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--br2);border-radius:4px}
 </style>
@@ -356,6 +378,15 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
   <div class="topbar">
     <div class="topbar-title" id="pageTitle"><b>Органика</b></div>
     <div class="ctrl-group" id="ctrlBar">
+      <div class="brand-switcher" id="brandSwitcher">
+        <button class="brand-btn active" id="brandBtn0" onclick="switchBrand(0)">
+          <span class="brand-dot" style="background:#3b82f6"></span>Jugabet Chile
+        </button>
+        <button class="brand-btn" id="brandBtn1" onclick="switchBrand(1)">
+          <span class="brand-dot" style="background:#10b981"></span>Fortunazo Chile
+        </button>
+      </div>
+
       <div class="seg" id="granSeg">
         <button class="seg-btn" onclick="setGran('day',this)">По дням</button>
         <button class="seg-btn on" onclick="setGran('week',this)">По неделям</button>
@@ -465,12 +496,25 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
       Таблица → Расширения → Apps Script → Развернуть → Веб-приложение
     </div>
 
-    <div>
-      <div style="font-size:11px;font-family:var(--mo);color:var(--mu);margin-bottom:5px">Apps Script URL</div>
-      <input type="text" id="sheetsUrl"
-        placeholder="https://script.google.com/macros/s/..."
-        style="width:100%;background:var(--s3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);font-size:11px;font-family:var(--mo);padding:7px 10px"
-        oninput="saveSheetsUrl(this.value)">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mo);color:var(--mu);margin-bottom:5px">
+          <span class="brand-dot" style="background:#3b82f6"></span>Jugabet Chile — Apps Script URL
+        </div>
+        <input type="text" id="sheetsUrl0"
+          placeholder="https://script.google.com/macros/s/..."
+          style="width:100%;background:var(--s3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);font-size:11px;font-family:var(--mo);padding:7px 10px"
+          oninput="saveBrandUrl(0,this.value)">
+      </div>
+      <div>
+        <div style="font-size:11px;font-family:var(--mo);color:var(--mu);margin-bottom:5px">
+          <span class="brand-dot" style="background:#10b981"></span>Fortunazo Chile — Apps Script URL
+        </div>
+        <input type="text" id="sheetsUrl1"
+          placeholder="https://script.google.com/macros/s/..."
+          style="width:100%;background:var(--s3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);font-size:11px;font-family:var(--mo);padding:7px 10px"
+          oninput="saveBrandUrl(1,this.value)">
+      </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -541,6 +585,11 @@ select.map-sel:focus{outline:none;border-color:var(--ac)}
 </div>
 
 <script>
+
+
+
+
+
 // ═════════════════════════════════════════════════════
 //  STATE
 // ═════════════════════════════════════════════════════
@@ -1149,7 +1198,8 @@ function renderAll(){
   else if(S.page==='goals') pgGoals();
 }
 
-// ─── ORGANIC ───────────────────────────────────────────
+// ─── ORGANIC ───────────────────────────────────────────  var _orgIns=organicInsights(rows,sliceCmp());
+  
 function pgOrganic(rows){
   var prev=sliceCmp(), pl=cmpLabel();
   var lbls=rows.map(function(r){return r.lbl;});
@@ -1272,7 +1322,10 @@ function pgOrganic(rows){
   var stabText=cvClk>30?'Нестабильный':cvClk>15?'Умеренный':'Стабильный';
 
   var el=document.getElementById('dash');
+  var _orgIns=organicInsights(rows,sliceCmp());
+  var _corrIns=calcCorrelations(S.mapped);
   el.innerHTML=
+    insBlock('org',_orgIns)+(_corrIns.length?insBlock('org-corr',_corrIns):'')+
     '<div class="stats-row">'+sc+
       // σ card
       '<div class="stat-card">'+
@@ -1407,6 +1460,7 @@ function pgOrganic(rows){
 }
 
 // ─── CONV ──────────────────────────────────────────────
+
 function pgConv(rows){
   var prev=sliceCmp(), pl=cmpLabel();
   var lbls=rows.map(function(r){return r.lbl;});
@@ -1498,7 +1552,9 @@ function pgConv(rows){
   var ds2=[{label:'Клик→Рег %',color:'#f59e0b'},{label:'Рег→FTD %',color:'#8b5cf6'}];
   var ds3=[{label:'Рег→FTD %',color:'#8b5cf6'},{label:'Рег→TryFTD %',color:'#ec4899'}];
 
+    var _convIns=convInsights(rows,sliceCmp());
   document.getElementById('dash').innerHTML=
+    insBlock('conv',_convIns)+
     '<div class="stats-row">'+sc+'</div>'+
     '<div class="trend-row">'+tb+'</div>'+
 
@@ -1632,7 +1688,7 @@ function calcClicks(){
   var el=document.getElementById('calcResult');
   if(!el)return;
   el.innerHTML=
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'+
+'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'+
       '<div>'+
         '<div style="font-size:10px;color:var(--mu);margin-bottom:3px">Нужно кликов</div>'+
         '<div style="font-size:24px;font-weight:600;color:#3b82f6">'+clicksNeeded.toLocaleString()+'</div>'+
@@ -2050,6 +2106,19 @@ function pgCohort(){
   }
   if(!allDays.length){document.getElementById('dash').innerHTML='<div style="padding:40px;color:var(--mu);text-align:center">Нет данных за выбранный период</div>';return;}
 
+  // Warn if too few periods for meaningful cohort analysis
+  var _minDays = S.gran==='month' ? 60 : S.gran==='week' ? 14 : 14;
+  if(allDays.length < _minDays){
+    var _gran = S.gran==='month'?'месяцев':S.gran==='week'?'недель':'дней';
+    document.getElementById('dash').innerHTML=
+      '<div style="padding:40px;text-align:center;color:var(--mu)">'+
+        '<div style="font-size:14px;margin-bottom:8px">⚠ Мало данных для когортного анализа</div>'+
+        '<div style="font-size:12px">Выбрано '+allDays.length+' дн. — для сравнения '+_gran+' нужно минимум '+_minDays+' дней</div>'+
+        '<div style="font-size:11px;margin-top:8px;color:var(--mu)">Переключи на <b style="color:var(--tx)">30 дней</b>, <b style="color:var(--tx)">3 месяца</b> или <b style="color:var(--tx)">Все</b></div>'+
+      '</div>';
+    return;
+  }
+
   // Group by week or month (no split across month boundaries)
   var useMonth=S.gran==='month';
   var bk={},ord=[];
@@ -2277,7 +2346,7 @@ function pgAnomaly(){
         '<span class="anom-metric" style="color:'+a.color+'">'+a.metric+'</span>'+
         '<span class="anom-val">'+a.val.toFixed(2)+'</span>'+
         '<span style="font-size:11px;color:var(--mu);font-family:var(--mo);margin-left:6px">ср: '+a.mean.toFixed(2)+'</span>'+
-        '<span class="anom-dev '+(a.bad?'anom-high':'anom-low')+'">'+devStr+'</span>'+
+        (anomalyExplain(a,S.mapped)?'<span style="font-size:10px;color:var(--mu);font-family:var(--mo);margin-left:8px;font-style:italic">→ '+anomalyExplain(a,S.mapped)+'</span>':'')+ 
         '</div>';
     }).join('');
 
@@ -3492,7 +3561,7 @@ function scheduleAutoSave(){
   var status = document.getElementById('sheetsStatus');
   if(status){ status.style.display='block'; status.style.color='var(--mu)'; status.textContent='⏳ Сохранение в Sheets через 2 сек...'; }
   _autoSaveTimer = setTimeout(function(){
-    var url = getSheetsUrl();
+    var url = getBrandUrls()[activeBrand];
     if(!url){ 
       if(status){ status.style.display='none'; }
       return; 
@@ -3525,31 +3594,223 @@ function refreshGoalsDisplay(){
 
 
 
-// ═════════════════════════════════════════════════════
-//  GOOGLE SHEETS INTEGRATION
-// ═════════════════════════════════════════════════════
-var SHEETS_URL_KEY = 'orgdash_sheets_url';
 
-function getSheetsUrl(){
-  return localStorage.getItem(SHEETS_URL_KEY)||'';
+// ═════════════════════════════════════════════════════
+//  MULTI-BRAND ENGINE
+// ═════════════════════════════════════════════════════
+var BRANDS = [
+  {name:'Jugabet Chile',   color:'#3b82f6', key:'jugabet'},
+  {name:'Fortunazo Chile', color:'#10b981', key:'fortunazo'},
+];
+var activeBrand = 0;
+
+// Per-brand data store
+var brandData = [
+  {mapped:[], seoRows:[], goals:{}, loaded:false},
+  {mapped:[], seoRows:[], goals:{}, loaded:false},
+];
+
+var BRAND_URL_KEY = 'orgdash_brand_urls_v1';
+
+function getBrandUrls(){
+  try{ return JSON.parse(localStorage.getItem(BRAND_URL_KEY)||'["",""]'); }
+  catch(e){ return ['','']; }
 }
-function saveSheetsUrl(url){
-  localStorage.setItem(SHEETS_URL_KEY, url.trim());
+function saveBrandUrl(idx, url){
+  var urls = getBrandUrls();
+  urls[idx] = url.trim();
+  localStorage.setItem(BRAND_URL_KEY, JSON.stringify(urls));
+}
+function getSheetsUrl(){ return getBrandUrls()[activeBrand] || ''; }
+
+function switchBrand(idx){
+  if(idx === activeBrand) return;
+  activeBrand = idx;
+
+  // Update buttons
+  document.querySelectorAll('.brand-btn').forEach(function(btn, i){
+    btn.classList.toggle('active', i === idx);
+  });
+
+  // Load brand data into S
+  var bd = brandData[idx];
+  S.mapped   = bd.mapped;
+  S.seoRows  = bd.seoRows || [];
+
+  // Update goals
+  try{ localStorage.setItem(GOALS_KEY, JSON.stringify(bd.goals||{})); }catch(e){}
+
+  // Update nav
+  var navFile = document.getElementById('navFile');
+  var navRows = document.getElementById('navRows');
+  if(navFile) navFile.textContent = bd.loaded ? BRANDS[idx].name : BRANDS[idx].name+' (нет данных)';
+  if(navRows) navRows.textContent = bd.mapped.length ? bd.mapped.length+' строк' : '';
+
+  // Update green dot
+  var urls = getBrandUrls();
+  var dot = document.getElementById('sheetsNavDot');
+  if(dot) dot.style.display = (urls[0]||urls[1]) ? 'block' : 'none';
+
+  // Update page title
+  var titleEl = document.getElementById('navBrandTitle');
+  if(titleEl) titleEl.textContent = BRANDS[idx].name;
+
+  killCharts();
+  renderAll();
+}
+
+function loadBrandData(idx, callback){
+  var urls = getBrandUrls();
+  var url  = urls[idx];
+  if(!url){ if(callback) callback(false); return; }
+
+  var done = {metrics:false, seo:false, goals:false};
+  function checkDone(){
+    if(done.metrics && done.seo && done.goals){
+      brandData[idx].loaded = true;
+      if(callback) callback(true);
+    }
+  }
+
+  // Metrics
+  jsonpFetch(url+'?action=metrics', function(err, data){
+    if(!err && data && !data.error && data.length){
+      // Process through mapper into mapped rows
+      var rawMapped = processRawToMapped(data);
+      brandData[idx].mapped = rawMapped;
+    }
+    done.metrics = true;
+    checkDone();
+  });
+
+  // SEO
+  jsonpFetch(url+'?action=seo', function(err, data){
+    if(!err && data && !data.error && data.length){
+      brandData[idx].seoRows = data;
+    }
+    done.seo = true;
+    checkDone();
+  });
+
+  // Goals
+  jsonpFetch(url+'?action=goals', function(err, data){
+    if(!err && data && !data.error){
+      brandData[idx].goals = data;
+    }
+    done.goals = true;
+    checkDone();
+  });
+}
+
+// Process raw sheet data through column mapping
+function processRawToMapped(raw){
+  if(!raw || !raw.length) return [];
+  // Auto-detect columns from first row keys
+  var keys = Object.keys(raw[0]);
+  function findCol(patterns){
+    for(var i=0;i<patterns.length;i++){
+      var p=patterns[i].toLowerCase();
+      for(var j=0;j<keys.length;j++){
+        if(keys[j].toLowerCase().indexOf(p)!==-1) return keys[j];
+      }
+    }
+    return null;
+  }
+  var colDate  = findCol(['date']);
+  var colImpr  = findCol(['impression','impr','show','показ']);
+  var colClk   = findCol(['click','клик']);
+  var colRegs  = findCol(['registr','reg','рег']);
+  var colFtd   = findCol(['ftd init','ftd_init','ftdinit']);
+  var colAtpu  = findCol(['atpu casino','atpu_casino']) ? null : findCol(['atpu']);
+  var colAtpuC = findCol(['atpu casino','atpu_casino']);
+  var colAtpuS = findCol(['atpu sport','atpu_sport']);
+  var colFraud = findCol(['fraud','фрод']);
+  var colF2s   = findCol(['ftd2std','ftd2s']);
+  var colR2f   = findCol(['reg2ftd','r2ftd','рег2фтд']);
+  var colR2t   = findCol(['reg2try','regtry']);
+
+  return raw.map(function(r){
+    var dateVal = colDate ? String(r[colDate]||'') : '';
+    // Normalize date
+    if(dateVal.indexOf('T') !== -1) dateVal = dateVal.slice(0,10);
+    if(!dateVal || dateVal.length < 8) return null;
+    var clk  = +(r[colClk]||0);
+    var impr = +(r[colImpr]||0);
+    var regs = +(r[colRegs]||0);
+    var ftd  = +(r[colFtd]||0);
+    return {
+      date:    dateVal,
+      lbl:     dateVal,
+      impr:    impr,
+      clicks:  clk,
+      regs:    regs,
+      ftd:     ftd,
+      atpu:    +(r[colAtpu]||0),
+      atpuC:   +(r[colAtpuC]||0),
+      atpuS:   +(r[colAtpuS]||0),
+      fraud:   +(r[colFraud]||0),
+      ftd2std: +(r[colF2s]||0),
+      r2ftd:   colR2f ? +(r[colR2f]||0) : (regs>0?+(ftd/regs*100).toFixed(3):0),
+      reg2ftd: colR2f ? +(r[colR2f]||0) : (regs>0?+(ftd/regs*100).toFixed(3):0),
+      reg2try: +(r[colR2t]||0),
+      ctr:     impr>0 ? +(clk/impr*100).toFixed(3) : 0,
+      c2r:     clk>0  ? +(regs/clk*100).toFixed(3)  : 0,
+    };
+  }).filter(Boolean).sort(function(a,b){return a.date>b.date?1:-1;});
+}
+
+function autoLoadFromSheets(){
+  var urls = getBrandUrls();
+  var dot  = document.getElementById('sheetsNavDot');
+  if(dot) dot.style.display = (urls[0]||urls[1]) ? 'block' : 'none';
+  if(!urls[0] && !urls[1]){
+    sheetsStatus('⚠ Укажи URL скриптов для брендов', true);
+    return;
+  }
+
+  sheetsStatus('⏳ Загружаем данные обоих брендов...');
+
+  var loaded = [false, false];
+  function onBrandLoaded(idx, ok){
+    loaded[idx] = true;
+    var brand = BRANDS[idx];
+    if(ok){
+      sheetsStatus('✓ '+brand.name+': загружено '+brandData[idx].mapped.length+' строк');
+    }
+    if(loaded[0] && loaded[1]){
+      // Both done - load active brand into S
+      var bd = brandData[activeBrand];
+      S.mapped  = bd.mapped;
+      S.seoRows = bd.seoRows || [];
+      try{ localStorage.setItem(GOALS_KEY, JSON.stringify(bd.goals||{})); }catch(e){}
+      var navRows = document.getElementById('navRows');
+      if(navRows) navRows.textContent = bd.mapped.length+' строк · '+BRANDS[activeBrand].name;
+      sheetsStatus('✓ Оба бренда загружены');
+      killCharts();
+      renderAll();
+    }
+  }
+
+  if(urls[0]) loadBrandData(0, function(ok){ onBrandLoaded(0, ok); });
+  else        { brandData[0].loaded=false; onBrandLoaded(0, false); }
+
+  if(urls[1]) loadBrandData(1, function(ok){ onBrandLoaded(1, ok); });
+  else        { brandData[1].loaded=false; onBrandLoaded(1, false); }
 }
 
 function openSheetsPanel(){
-  var panel = document.getElementById('sheetsPanel');
+  var panel   = document.getElementById('sheetsPanel');
   var overlay = document.getElementById('sheetsOverlay');
-  var input = document.getElementById('sheetsUrl');
-  var url = getSheetsUrl();
-  if(input) input.value = url;
+  var urls    = getBrandUrls();
+  var i0 = document.getElementById('sheetsUrl0');
+  var i1 = document.getElementById('sheetsUrl1');
+  if(i0) i0.value = urls[0]||'';
+  if(i1) i1.value = urls[1]||'';
   panel.classList.add('open');
   overlay.classList.add('open');
-  // Show saved status
-  if(url){
-    sheetsStatus('✓ URL сохранён — данные грузятся автоматически при открытии');
-  }
+  if(urls[0]||urls[1]) sheetsStatus('✓ URL сохранены — данные грузятся при открытии');
 }
+
 function closeSheetsPanel(){
   document.getElementById('sheetsPanel').classList.remove('open');
   document.getElementById('sheetsOverlay').classList.remove('open');
@@ -3605,43 +3866,43 @@ function jsonpFetch(url, callback){
 }
 
 function sheetsLoadMetrics(){
-  var url = sheetsUrl(); if(!url) return;
-  sheetsStatus('⏳ Загружаем метрики...');
-  jsonpFetch(url+'?action=metrics', function(err, data){
-    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
-    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    if(!data.length){ sheetsStatus('⚠ Лист metrics пустой', true); return; }
-    onRaw(data, 'Google Sheets (metrics)');
-    sheetsStatus('✓ Загружено '+data.length+' строк метрик');
+  var urls=getBrandUrls(), url=urls[activeBrand]; if(!url){sheetsStatus('⚠ Нет URL для '+BRANDS[activeBrand].name,true);return;}
+  sheetsStatus('⏳ Загружаем метрики '+BRANDS[activeBrand].name+'...');
+  jsonpFetch(url+'?action=metrics',function(err,data){
+    if(err||!data||data.error||!data.length){sheetsStatus('⚠ Ошибка загрузки',true);return;}
+    var mapped=processRawToMapped(data);
+    brandData[activeBrand].mapped=mapped;
+    S.mapped=mapped;
+    sheetsStatus('✓ Загружено '+mapped.length+' строк · '+BRANDS[activeBrand].name);
+    killCharts(); renderAll();
   });
 }
 
 function sheetsLoadSeo(){
-  var url = sheetsUrl(); if(!url) return;
+  var urls=getBrandUrls(), url=urls[activeBrand]; if(!url){sheetsStatus('⚠ Нет URL для '+BRANDS[activeBrand].name,true);return;}
   sheetsStatus('⏳ Загружаем SEO...');
-  jsonpFetch(url+'?action=seo', function(err, data){
-    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
-    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
-    if(!data.length){ sheetsStatus('⚠ Лист seo пустой', true); return; }
-    seoOnRaw(data, 'Google Sheets (seo)');
-    sheetsStatus('✓ Загружено '+data.length+' строк SEO');
+  jsonpFetch(url+'?action=seo',function(err,data){
+    if(err||!data||data.error||!data.length){sheetsStatus('⚠ Ошибка или нет SEO данных',true);return;}
+    brandData[activeBrand].seoRows=data;
+    seoOnRaw(data,'Google Sheets SEO');
+    sheetsStatus('✓ SEO загружено · '+BRANDS[activeBrand].name);
   });
 }
 
 function sheetsLoadGoals(){
-  var url = sheetsUrl(); if(!url) return;
+  var urls=getBrandUrls(), url=urls[activeBrand]; if(!url){sheetsStatus('⚠ Нет URL для '+BRANDS[activeBrand].name,true);return;}
   sheetsStatus('⏳ Загружаем цели...');
-  jsonpFetch(url+'?action=goals', function(err, data){
-    if(err){ sheetsStatus('⚠ Ошибка: '+err.message, true); return; }
-    if(data.error){ sheetsStatus('⚠ '+data.error, true); return; }
+  jsonpFetch(url+'?action=goals',function(err,data){
+    if(err||!data||data.error){sheetsStatus('⚠ Ошибка загрузки целей',true);return;}
+    brandData[activeBrand].goals=data;
     saveGoals(data);
-    sheetsStatus('✓ Цели загружены');
+    sheetsStatus('✓ Цели загружены · '+BRANDS[activeBrand].name);
     if(S.page==='goals') pgGoals();
   });
 }
 
 async function sheetsSaveGoals(){
-  var url = sheetsUrl(); if(!url) return;
+  var url = getBrandUrls()[activeBrand]; if(!url){sheetsStatus('⚠ Нет URL для '+BRANDS[activeBrand].name,true);return;}
   sheetsStatus('⏳ Сохраняем цели...');
   try{
     // Save raw goals (for sync between devices)
@@ -3764,69 +4025,152 @@ function buildGoalsReport(){
 }
 
 
+// autoLoadFromSheets moved to brand engine
+
+
 // ═════════════════════════════════════════════════════
-//  AUTO-LOAD FROM GOOGLE SHEETS ON PAGE OPEN
+//  INSIGHTS ENGINE
 // ═════════════════════════════════════════════════════
-function autoLoadFromSheets(){
-  var url = getSheetsUrl();
-  // Show green dot in nav if URL saved
-  var dot = document.getElementById('sheetsNavDot');
-  if(dot) dot.style.display = url ? 'block' : 'none';
-  if(!url){
-    sheetsStatus('⚠ Сначала укажи URL Apps Script', true);
-    return;
-  }
-
-  sheetsStatus('⏳ Загружаем все данные...');
-
-  // Show loading in nav
-  var navFile = document.getElementById('navFile');
-  var navRows = document.getElementById('navRows');
-  if(navFile) navFile.textContent = '⏳ Загрузка из Google Sheets...';
-
-  var doneCount = 0;
-  function checkDone(){
-    doneCount++;
-    if(doneCount >= 3){
-      if(navRows) navRows.textContent = S.mapped.length + ' строк · из Google Sheets';
-      sheetsStatus('✓ Все данные загружены (' + S.mapped.length + ' строк метрик)');
-    }
-  }
-
-  // Load metrics
-  jsonpFetch(url + '?action=metrics', function(err, data){
-    if(err || !data || data.error || !data.length){
-      sheetsStatus('⚠ Ошибка загрузки метрик: ' + (err?err.message:(data&&data.error)||'пусто'), true);
-      if(navFile) navFile.textContent = '⚠ Ошибка загрузки';
-      checkDone(); return;
-    }
-    onRaw(data, 'Google Sheets');
-    checkDone();
-  });
-
-  // Load SEO
-  jsonpFetch(url + '?action=seo', function(err, data){
-    if(!err && data && !data.error && data.length){
-      seoOnRaw(data, 'Google Sheets (SEO)');
-    }
-    checkDone();
-  });
-
-  // Load goals
-  jsonpFetch(url + '?action=goals', function(err, data){
-    if(!err && data && !data.error){
-      saveGoals(data);
-      if(S.page === 'goals') pgGoals();
-    }
-    checkDone();
-  });
+function toggleInsights(id){
+  var btn=document.getElementById('ins-btn-'+id);
+  var body=document.getElementById('ins-body-'+id);
+  if(!btn||!body) return;
+  var open=btn.classList.contains('open');
+  btn.classList.toggle('open',!open);
+  body.classList.toggle('open',!open);
 }
 
-// Run on page load
-window.addEventListener('load', function(){
-  // Small delay to let page render first
-  setTimeout(autoLoadFromSheets, 300);
-});
+function insBlock(id,items){
+  if(!items||!items.length) return '';
+  var rows2=items.map(function(it){
+    var cls=it.type==='good'?'ins-good':it.type==='warn'?'ins-warn':it.type==='bad'?'ins-bad':'ins-info';
+    var icon=it.type==='good'?'▲':it.type==='warn'?'⚠':it.type==='bad'?'▼':'●';
+    return'<div class="ins-item"><span class="ins-icon '+cls+'">'+icon+'</span><span>'+it.text+'</span></div>';
+  }).join('');
+  return'<div class="ins-block">'+
+    '<div class="ins-toggle" id="ins-btn-'+id+'" onclick="toggleInsights(\''+id+'\')">'+
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'+
+      '💡 Инсайты <span style="font-weight:400;font-size:10px;color:var(--mu);margin-left:4px">('+items.length+')</span>'+
+    '</div>'+
+    '<div class="ins-body" id="ins-body-'+id+'">'+rows2+'</div>'+
+  '</div>';
+}
+
+function organicInsights(rows,prev){
+  var items=[];
+  if(!rows.length) return items;
+  var avgC=rows.reduce(function(a,r){return a+(+r.clicks||0);},0)/rows.length;
+  var avgI=rows.reduce(function(a,r){return a+(+r.impr||0);},0)/rows.length;
+  var avgCtr=avgI>0?+(avgC/avgI*100).toFixed(2):0;
+  if(prev&&prev.length){
+    var pC=prev.reduce(function(a,r){return a+(+r.clicks||0);},0)/prev.length;
+    var pI=prev.reduce(function(a,r){return a+(+r.impr||0);},0)/prev.length;
+    var pCtr=pI>0?+(pC/pI*100).toFixed(2):0;
+    var dClk=pC>0?+(((avgC-pC)/pC)*100).toFixed(1):null;
+    var dImpr=pI>0?+(((avgI-pI)/pI)*100).toFixed(1):null;
+    var dCtr=pCtr>0?+(avgCtr-pCtr).toFixed(2):null;
+    if(dClk!==null&&dClk<-10) items.push({type:'bad',text:'Клики упали на '+Math.abs(dClk)+'% vs предыдущий период'});
+    else if(dClk!==null&&dClk>10) items.push({type:'good',text:'Клики выросли на '+dClk+'% vs предыдущий период'});
+    if(dCtr!==null&&Math.abs(dCtr)>0.5){
+      if(dCtr<0) items.push({type:'bad', text:'CTR упал на '+Math.abs(dCtr)+'пп ('+pCtr.toFixed(1)+'% → '+avgCtr.toFixed(1)+'%) — проверь позиции в GSC'});
+      else       items.push({type:'good',text:'CTR вырос на '+dCtr+'пп ('+pCtr.toFixed(1)+'% → '+avgCtr.toFixed(1)+'%)'});
+    }
+    if(dClk!==null&&dCtr!==null&&dClk<-5&&dCtr>0) items.push({type:'warn',text:'Клики упали но CTR вырос — скорее всего упали Показы (алгоритм/сезонность), не качество контента'});
+    if(dImpr!==null&&dImpr>10&&dClk!==null&&Math.abs(dClk)<3) items.push({type:'warn',text:'Показы растут (+'+dImpr+'%) но Клики стоят — CTR снижается, проверь Title/Description'});
+  }
+  if(rows.length>=6){
+    var mid=Math.floor(rows.length/2);
+    var fC=rows.slice(0,mid).reduce(function(a,r){return a+(+r.clicks||0);},0)/mid;
+    var lC=rows.slice(mid).reduce(function(a,r){return a+(+r.clicks||0);},0)/(rows.length-mid);
+    var trend=fC>0?+(((lC-fC)/fC)*100).toFixed(1):null;
+    if(trend!==null&&Math.abs(trend)>8) items.push({type:trend>0?'good':'bad',text:'Тренд кликов за период: '+(trend>0?'+':'')+trend+'% (вторая половина vs первая)'});
+  }
+  return items;
+}
+
+function convInsights(rows,prev){
+  var items=[];
+  if(!rows.length) return items;
+  var avgC2r=rows.reduce(function(a,r){return a+(+r.c2r||0);},0)/rows.length;
+  var avgR2ftd=rows.reduce(function(a,r){return a+(+r.r2ftd||0);},0)/rows.length;
+  var avgRegs=rows.reduce(function(a,r){return a+(+r.regs||0);},0)/rows.length;
+  var avgFtd=rows.reduce(function(a,r){return a+(+r.ftd||0);},0)/rows.length;
+  if(prev&&prev.length){
+    var pC2r=prev.reduce(function(a,r){return a+(+r.c2r||0);},0)/prev.length;
+    var pR2ftd=prev.reduce(function(a,r){return a+(+r.r2ftd||0);},0)/prev.length;
+    var pRegs=prev.reduce(function(a,r){return a+(+r.regs||0);},0)/prev.length;
+    var pFtd=prev.reduce(function(a,r){return a+(+r.ftd||0);},0)/prev.length;
+    // For conversions use absolute pp difference, not relative %
+    var dC2r   = +(avgC2r   - pC2r).toFixed(2);    // in pp
+    var dR2ftd = +(avgR2ftd - pR2ftd).toFixed(2);   // in pp
+    var dRegs  = pRegs>0 ? +(((avgRegs-pRegs)/pRegs)*100).toFixed(1) : null;  // relative % ok for volumes
+    var dFtd   = pFtd>0  ? +(((avgFtd -pFtd) /pFtd) *100).toFixed(1) : null;
+    if(dRegs!==null&&dFtd!==null&&dRegs>5&&dFtd<dRegs-10) items.push({type:'warn',text:'Регистрации растут (+'+dRegs+'%) но FTD отстаёт ('+dFtd+'%) — просадка Рег→FTD'});
+    if(dRegs!==null&&dFtd!==null&&dRegs<-5&&dFtd<-5) items.push({type:'bad',text:'Одновременное падение Регов ('+dRegs+'%) и FTD ('+dFtd+'%) — системная проблема'});
+    // C2R: show only if abs change > 0.2pp
+    if(Math.abs(dC2r)>0.2){
+      if(dC2r<0) items.push({type:'bad', text:'Конверсия Клик→Рег упала на '+Math.abs(dC2r)+'пп ('+pC2r.toFixed(2)+'% → '+avgC2r.toFixed(2)+'%) — проверь посадочные страницы'});
+      else       items.push({type:'good',text:'Конверсия Клик→Рег выросла на '+dC2r+'пп ('+pC2r.toFixed(2)+'% → '+avgC2r.toFixed(2)+'%)'});
+    }
+    // R2FTD: show only if abs change > 1pp
+    if(Math.abs(dR2ftd)>1){
+      if(dR2ftd<0) items.push({type:'bad', text:'Конверсия Рег→FTD упала на '+Math.abs(dR2ftd)+'пп ('+pR2ftd.toFixed(1)+'% → '+avgR2ftd.toFixed(1)+'%) — проверь онбординг или платёжную систему'});
+      else         items.push({type:'good',text:'Конверсия Рег→FTD выросла на '+dR2ftd+'пп ('+pR2ftd.toFixed(1)+'% → '+avgR2ftd.toFixed(1)+'%)'});
+    }
+  }
+  return items;
+}
+
+function anomalyExplain(anom,allRows){
+  if(!anom||!allRows.length) return '';
+  var row=allRows.find(function(r){return r.date===anom.date;});
+  if(!row) return '';
+  var meanClk=allRows.reduce(function(a,r){return a+(+r.clicks||0);},0)/allRows.length;
+  var meanImpr=allRows.reduce(function(a,r){return a+(+r.impr||0);},0)/allRows.length;
+  var meanRegs=allRows.reduce(function(a,r){return a+(+r.regs||0);},0)/allRows.length;
+  if(anom.k==='clicks'){
+    if(anom.bad&&(+row.impr)<meanImpr*0.8) return 'Упали Показы → упали Клики (алгоритм/сезонность)';
+    if(anom.bad) return 'Аномальное падение кликов — проверь позиции в GSC';
+    return 'Всплеск кликов';
+  }
+  if(anom.k==='regs'){
+    if(anom.bad&&(+row.clicks)>meanClk*0.9) return 'Клики в норме но Реги упали — проблема с посадочной или формой';
+    return anom.bad?'Падение регистраций':'Всплеск регистраций';
+  }
+  if(anom.k==='ftd'){
+    if(anom.bad&&(+row.regs)>meanRegs*0.9) return 'Реги в норме но FTD упал — проблема с онбордингом или платёжной';
+    return anom.bad?'Падение FTD':'Всплеск FTD';
+  }
+  if(anom.k==='ctr') return anom.bad?'Низкий CTR — проверь Title/Description':'Высокий CTR';
+  return '';
+}
+
+function calcCorrelations(allRows){
+  var items=[];
+  if(allRows.length<14) return items;
+  var ctrVals=allRows.map(function(r){return+r.ctr||0;}).sort(function(a,b){return a-b;});
+  var medCtr=ctrVals[Math.floor(ctrVals.length/2)];
+  var hiRows=allRows.filter(function(r){return(+r.ctr||0)>medCtr;});
+  var loRows=allRows.filter(function(r){return(+r.ctr||0)<=medCtr;});
+  if(hiRows.length&&loRows.length){
+    var hiR=hiRows.reduce(function(a,r){return a+(+r.r2ftd||0);},0)/hiRows.length;
+    var loR=loRows.reduce(function(a,r){return a+(+r.r2ftd||0);},0)/loRows.length;
+    var diff=loR>0?+(((hiR-loR)/loR)*100).toFixed(1):null;
+    if(diff!==null&&Math.abs(diff)>5) items.push({type:diff>0?'good':'info',text:'При CTR выше '+medCtr.toFixed(1)+'% → Рег→FTD в среднем '+(diff>0?'на '+diff+'% выше':'на '+Math.abs(diff)+'% ниже')+' нормы'});
+  }
+  var clkVals=allRows.map(function(r){return+r.clicks||0;}).sort(function(a,b){return a-b;});
+  var medClk=clkVals[Math.floor(clkVals.length/2)];
+  var hiC=allRows.filter(function(r){return(+r.clicks||0)>medClk;});
+  var loC=allRows.filter(function(r){return(+r.clicks||0)<=medClk;});
+  if(hiC.length&&loC.length){
+    var hiC2r=hiC.reduce(function(a,r){return a+(+r.c2r||0);},0)/hiC.length;
+    var loC2r=loC.reduce(function(a,r){return a+(+r.c2r||0);},0)/loC.length;
+    var diffC=loC2r>0?+(((hiC2r-loC2r)/loC2r)*100).toFixed(1):null;
+    if(diffC!==null&&Math.abs(diffC)>5) items.push({type:'info',text:'При кликах выше медианы ('+Math.round(medClk).toLocaleString()+') → Клик→Рег '+(diffC>0?'на '+diffC+'% выше':'на '+Math.abs(diffC)+'% ниже')+' нормы'});
+  }
+  return items;
+}
+
 
 </script>
 </body>
