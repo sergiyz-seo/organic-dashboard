@@ -694,6 +694,13 @@ function autoDetect(cols){
   return map;
 }
 
+function hideUploadZone(){
+  var uz = document.getElementById('uploadZone');
+  if(uz) uz.classList.add('hidden');
+  var mb = document.getElementById('mapperBox');
+  if(mb) mb.style.display='none';
+}
+
 function onRaw(data,fname){
   if(!data||!data.length){alert('Файл пустой'); return;}
   S.raw=data;
@@ -3655,6 +3662,13 @@ function switchBrand(idx){
   var titleEl = document.getElementById('navBrandTitle');
   if(titleEl) titleEl.textContent = BRANDS[idx].name;
 
+  // Update nav file info
+  var nf = document.getElementById('navFile');
+  var nr = document.getElementById('navRows');
+  if(nf){ nf.textContent = BRANDS[idx].name; nf.className = bd.loaded ? 'nav-file-name ok' : 'nav-file-name'; }
+  if(nr) nr.textContent = bd.mapped.length ? bd.mapped.length+' строк' : '';
+  if(bd.loaded && bd.mapped.length) hideUploadZone();
+
   killCharts();
   renderAll();
 }
@@ -3783,8 +3797,11 @@ function autoLoadFromSheets(){
       S.mapped  = bd.mapped;
       S.seoRows = bd.seoRows || [];
       try{ localStorage.setItem(GOALS_KEY, JSON.stringify(bd.goals||{})); }catch(e){}
-      var navRows = document.getElementById('navRows');
-      if(navRows) navRows.textContent = bd.mapped.length+' строк · '+BRANDS[activeBrand].name;
+      var navFile2 = document.getElementById('navFile');
+      var navRows2 = document.getElementById('navRows');
+      if(navFile2){ navFile2.textContent=BRANDS[activeBrand].name; navFile2.className='nav-file-name ok'; }
+      if(navRows2) navRows2.textContent = bd.mapped.length+' строк · '+BRANDS[activeBrand].name;
+      hideUploadZone();
       sheetsStatus('✓ Оба бренда загружены');
       killCharts();
       renderAll();
